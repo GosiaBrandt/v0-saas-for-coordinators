@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import type { NewCaseData, CaseType, CasePriority } from "@/lib/types";
 
 interface NewCaseDialogProps {
@@ -29,6 +30,8 @@ interface NewCaseDialogProps {
 }
 
 export function NewCaseDialog({ open, onOpenChange, onSubmit }: NewCaseDialogProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState<NewCaseData>({
     title: "",
     type: "senior",
@@ -40,20 +43,64 @@ export function NewCaseDialog({ open, onOpenChange, onSubmit }: NewCaseDialogPro
     nextStepDate: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    // Reset form
-    setFormData({
-      title: "",
-      type: "senior",
-      priority: "standardowa",
-      personName: "",
-      personContact: "",
-      region: "",
-      description: "",
-      nextStepDate: "",
-    });
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch("/api/cases", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          type: formData.type,
+          status: "new",
+          priority: formData.priority === "pilna" ? "urgent" : formData.priority === "wysoka" ? "high" : "normal",
+          related_person_name: formData.personName,
+          related_person_phone: formData.personContact,
+          due_date: formData.nextStepDate || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create case");
+      }
+
+      const newCase = await response.json();
+      
+      toast({
+        title: "Sprawa została dodana",
+        description: `Sprawa "${formData.title}" została pomyślnie utworzona.`,
+      });
+
+      // Call the original onSubmit for local state update
+      onSubmit(formData);
+      
+      // Reset form
+      setFormData({
+        title: "",
+        type: "senior",
+        priority: "standardowa",
+        personName: "",
+        personContact: "",
+        region: "",
+        description: "",
+        nextStepDate: "",
+      });
+      
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Błąd",
+        description: "Nie udało się dodać sprawy. Spróbuj ponownie.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isValid = formData.title && formData.personName && formData.region && formData.description;
@@ -176,8 +223,8 @@ export function NewCaseDialog({ open, onOpenChange, onSubmit }: NewCaseDialogPro
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Anuluj
             </Button>
-            <Button type="submit" disabled={!isValid}>
-              Dodaj sprawę
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {isSubmitting ? "Dodawanie..." : "Dodaj sprawę"}
             </Button>
           </DialogFooter>
         </form>
