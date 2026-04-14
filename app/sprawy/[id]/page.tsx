@@ -2,7 +2,7 @@
 
 import { use, useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,6 @@ function formatDate(dateStr: string | null): string {
 
 export default function CaseDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   
   // Find the case
   const caseItem = useMemo(() => demoCases.find((c) => c.id === id), [id]);
@@ -100,8 +99,10 @@ export default function CaseDetailsPage({ params }: { params: Promise<{ id: stri
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 h-16">
-            <Button variant="ghost" size="icon" onClick={() => router.back()}>
-              <ArrowLeft className="h-5 w-5" />
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
             </Button>
             <div className="flex-1 min-w-0">
               <h1 className="font-semibold truncate">{caseItem.title}</h1>
